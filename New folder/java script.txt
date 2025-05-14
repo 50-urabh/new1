@@ -1,0 +1,123 @@
+import React, { useState } from 'react';
+import axios from 'axios';
+import './App.css';
+
+function App() {
+  const [text, setText] = useState('');
+  const [url, setUrl] = useState('');
+  const [activeTab, setActiveTab] = useState('text');
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const analyzeContent = async () => {
+    setLoading(true);
+    try {
+      const endpoint = activeTab === 'text' ? '/api/analyze-text' : '/api/analyze-url';
+      const data = activeTab === 'text' ? { text } : { url };
+      
+      const response = await axios.post(endpoint, data);
+      setResults(response.data);
+    } catch (error) {
+      console.error('Error analyzing content:', error);
+      alert('Error analyzing content. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="app">
+      <header>
+        <h1>Fake News Detector AI</h1>
+        <p>Real-time analysis of news content credibility</p>
+      </header>
+
+      <div className="tabs">
+        <button 
+          className={activeTab === 'text' ? 'active' : ''}
+          onClick={() => setActiveTab('text')}
+        >
+          Analyze Text
+        </button>
+        <button 
+          className={activeTab === 'url' ? 'active' : ''}
+          onClick={() => setActiveTab('url')}
+        >
+          Check URL
+        </button>
+      </div>
+
+      <div className="input-container">
+        {activeTab === 'text' ? (
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Paste news article text here..."
+            rows="10"
+          />
+        ) : (
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="Enter news article URL..."
+          />
+        )}
+
+        <button onClick={analyzeContent} disabled={loading}>
+          {loading ? 'Analyzing...' : 'Analyze Content'}
+        </button>
+      </div>
+
+      {results && (
+        <div className="results">
+          <h2>Analysis Results</h2>
+          
+          <div className="score-container">
+            <h3>Credibility Score:</h3>
+            <div className="score-bar">
+              <div 
+                className="score-fill"
+                style={{ width: `${results.score}%` }}
+              ></div>
+              <span>{results.score}%</span>
+            </div>
+            <p className="score-label">
+              {results.score > 70 ? 'Likely Reliable' : 
+               results.score > 40 ? 'Use Caution' : 'Likely Unreliable'}
+            </p>
+          </div>
+
+          <div className="details">
+            <h3>Detailed Analysis:</h3>
+            <ul>
+              {results.details.map((detail, index) => (
+                <li key={index} className={detail.type}>
+                  {detail.type === 'positive' ? '✅' : 
+                   detail.type === 'warning' ? '⚠️' : '❌'} {detail.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {results.fact_checks && results.fact_checks.length > 0 && (
+            <div className="fact-checks">
+              <h3>Related Fact Checks:</h3>
+              <ul>
+                {results.fact_checks.map((check, index) => (
+                  <li key={index}>
+                    <a href={check.url} target="_blank" rel="noopener noreferrer">
+                      {check.claim} ({check.rating})
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
